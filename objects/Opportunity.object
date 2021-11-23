@@ -1,6 +1,559 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
     <validationRules>
+        <fullName>Actual_Closed_Date_Cannot_Change</fullName>
+        <active>false</active>
+        <description>This rule not allow Actual Close Date field update once an opportunity is closed.</description>
+        <errorConditionFormula>AND( NOT(ISNEW()), NOT(ISCHANGED(IsClosed)), IsClosed, ISCHANGED(Actual_Close_Date__c),($Profile.Name &lt;&gt; &quot;02 NSC Administrator&quot;),($Profile.Name &lt;&gt; &quot;04 NSC UI Administrator&quot;), ($Profile.Name &lt;&gt; &quot;Soup Integration&quot;),($Profile.Name &lt;&gt; &quot;iPaas Administration&quot;),($Profile.Name &lt;&gt; &quot;C9 Administration&quot;))</errorConditionFormula>
+        <errorDisplayField>Actual_Close_Date__c</errorDisplayField>
+        <errorMessage>Actual Close Date cannot be changed for a closed opportunity.</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Cannot_Manually_Set_Stage_as_Closing</fullName>
+        <active>false</active>
+        <description>Cannot manually set stage as Closing for CPQ Opptys</description>
+        <errorConditionFormula>AND (($Profile.Name &lt;&gt; &quot;04 NSC UI Administrator&quot;),
+($Profile.Name &lt;&gt;&quot;System Administrator&quot;),
+CPQ__c,
+     ISCHANGED(StageName),
+					ISPICKVAL(StageName, &apos;Closing&apos;),
+					(ISPICKVAL(SBQQ__PrimaryQuote__r.ApprovalStatus__c, &apos;&apos;))
+				)</errorConditionFormula>
+        <errorDisplayField>StageName</errorDisplayField>
+        <errorMessage>You cannot manually set CPQ opportunity stage as Closing.</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Check_EDD_Before_Closing_the_Opportunity</fullName>
+        <active>false</active>
+        <description>Restrict user to close the opportunity before adjusting the delivery schedules</description>
+        <errorConditionFormula>AND( 
+ISCHANGED(StageName), 
+Expected_Delivery_Date__c &lt; TODAY(), 
+OR( 
+ISPICKVAL( StageName, &apos;Closed/Booked&apos;), 
+ISPICKVAL( StageName, &apos;Closed/Lost&apos;), 
+ISPICKVAL( StageName, &apos;Closed/Discontinued&apos;), 
+ISPICKVAL( StageName, &apos;Closed/Booked - NonFunnel&apos;) 
+), 
+($Profile.Name &lt;&gt; &quot;01 GS Admin&quot;), 
+($Profile.Name &lt;&gt; &quot;02 NSC Administrator&quot;), 
+($Profile.Name &lt;&gt; &quot;04 NSC UI Administrator&quot;),
+($Profile.Name &lt;&gt; &quot;03 PRM Admin&quot;),
+($Profile.Name &lt;&gt; &quot;Product System Administrator&quot;), 
+($Profile.Name &lt;&gt; &quot;System Administrator&quot;), 
+($Profile.Name &lt;&gt; &quot;Soup Integration&quot;),
+($Profile.Name &lt;&gt; &quot;iPaas Administration&quot;),
+($Profile.Name &lt;&gt; &quot;C9 Administration&quot;)   
+)</errorConditionFormula>
+        <errorMessage>Expected Delivery Start Date must not be in Past while closing the Opportunity. Please adjust the Expected Delivery Start Date and Product Schedules and try again.</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Close_Date_Window</fullName>
+        <active>false</active>
+        <description>Enforce that the Close Date is within two weeks of the current date.</description>
+        <errorConditionFormula>AND( 
+OR( 
+Actual_Close_Date__c - TODAY() &gt; 14, 
+TODAY() - Actual_Close_Date__c &gt; 14 
+), 
+IsClosed, 
+ISCHANGED(Actual_Close_Date__c), 
+($Profile.Name &lt;&gt; &quot;01 GS Admin&quot;), 
+($Profile.Name &lt;&gt; &quot;02 NSC Administrator&quot;), 
+($Profile.Name &lt;&gt; &quot;04 NSC UI Administrator&quot;), 
+($Profile.Name &lt;&gt; &quot;03 PRM Admin&quot;), 
+($Profile.Name &lt;&gt; &quot;Product System Administrator&quot;), 
+($Profile.Name &lt;&gt; &quot;System Administrator&quot;), 
+($Profile.Name &lt;&gt; &quot;Soup Integration&quot;),
+($Profile.Name &lt;&gt; &quot;iPaas Administration&quot;),
+($Profile.Name &lt;&gt; &quot;C9 Administration&quot;)
+)</errorConditionFormula>
+        <errorDisplayField>Actual_Close_Date__c</errorDisplayField>
+        <errorMessage>The Actual Close Date must be +/- two weeks of the current date.  Please correct with an appropriate Actual Close Date.</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>ClosedBookedKeyCriteria</fullName>
+        <active>false</active>
+        <errorConditionFormula>(ISPICKVAL(StageName ,&apos;Closed/Booked - NonFunnel&apos;)||ISPICKVAL(StageName , &apos;Closed/Booked&apos;) )  &amp;&amp;  (ISBLANK( Key_Criteria__c ) )</errorConditionFormula>
+        <errorDisplayField>Key_Criteria__c</errorDisplayField>
+        <errorMessage>Required field &apos;Key Criteria&apos; missing for Closed Booked OR Closed Booked NonFunnel.</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>ClosedBookedPriceVariance</fullName>
+        <active>false</active>
+        <errorConditionFormula>(ISPICKVAL(StageName ,&apos;Closed/Booked - NonFunnel&apos;)||ISPICKVAL(StageName , &apos;Closed/Booked&apos;) )  &amp;&amp;  (ISPICKVAL( Price_Variance__c ,&apos;&apos;)) &amp;&amp;
+(PRIORVALUE( IsClosed ) == False) &amp;&amp;
+(ISCHANGED(StageName ))</errorConditionFormula>
+        <errorDisplayField>Price_Variance__c</errorDisplayField>
+        <errorMessage>Required field missing for Closed Booked OR Closed Booked NonFunnel.</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>ClosedBooked_Comments</fullName>
+        <active>false</active>
+        <description>Required for Closed/Booked</description>
+        <errorConditionFormula>(ISPICKVAL(StageName ,&apos;Closed/Booked - NonFunnel&apos;)||ISPICKVAL(StageName , &apos;Closed/Booked&apos;) ) &amp;&amp; (ISBLANK( Closed_Booked_Comments__c ) ) &amp;&amp; 
+(PRIORVALUE( IsClosed ) == False) &amp;&amp; 
+(ISCHANGED(StageName ))</errorConditionFormula>
+        <errorDisplayField>Closed_Booked_Comments__c</errorDisplayField>
+        <errorMessage>Required field missing for Closed Booked OR Closed Booked NonFunnel.</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>ClosedDiscontinued</fullName>
+        <active>false</active>
+        <errorConditionFormula>(ISPICKVAL(StageName ,&quot;Closed/Discontinued&quot;) || ISPICKVAL(StageName ,&quot;Closed/Lost&quot;) )  &amp;&amp;  (ISPICKVAL( Discontinued_Reasons__c ,&quot;&quot;) ) &amp;&amp;  
+$Profile.Name &lt;&gt; &quot;Soup Integration&quot;</errorConditionFormula>
+        <errorMessage>Required field &apos;Discontinued Reasons&apos; missing for Closed/Lost or Closed/Discontinued.</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>ClosedLosedKeyCriteria</fullName>
+        <active>false</active>
+        <errorConditionFormula>(ISPICKVAL(StageName ,&quot;Closed/Lost&quot;) )  &amp;&amp;  (ISBLANK( Key_Criteria__c ) ) &amp;&amp;
+(PRIORVALUE( IsClosed ) == False) &amp;&amp;
+(ISCHANGED(StageName ))</errorConditionFormula>
+        <errorDisplayField>Key_Criteria__c</errorDisplayField>
+        <errorMessage>Required field missing for Closed Lost.</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>ClosedLostPriceVariance</fullName>
+        <active>false</active>
+        <errorConditionFormula>(ISPICKVAL(StageName , &apos;Closed/Lost&apos;) )  &amp;&amp;  (ISPICKVAL( Price_Variance__c ,&apos;&apos;)) &amp;&amp;
+(PRIORVALUE( IsClosed ) == False) &amp;&amp;
+(ISCHANGED(StageName ))</errorConditionFormula>
+        <errorDisplayField>Price_Variance__c</errorDisplayField>
+        <errorMessage>Required field missing for Closed Lost.</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Contact_Mandatory_on_selling_stg</fullName>
+        <active>false</active>
+        <description>If the selling stage is &apos;Analyzing&apos; then the conatct field will be mandatory.</description>
+        <errorConditionFormula>AND(  
+OR(
+ TEXT(StageName) = &quot;Analyzing&quot;, 
+ TEXT(StageName) = &quot;Validating&quot;,
+ TEXT(StageName) = &quot;Offering&quot;, 
+ TEXT(StageName) = &quot;Proposing&quot;, 
+ TEXT(StageName) = &quot;Closing&quot;, 
+ TEXT(StageName) = &quot;Closed/Booked&quot;, 
+ TEXT(StageName) = &quot;Analyzing - NonFunnel&quot;, 
+ TEXT(StageName) = &quot;Validating - NonFunnel&quot;,
+ TEXT(StageName) = &quot;Offering - NonFunnel&quot;, 
+ TEXT(StageName) = &quot;Proposing - NonFunnel&quot;, 
+ TEXT(StageName) = &quot;Closing - NonFunnel&quot;, 
+ TEXT(StageName) = &quot;Closed/Booked - NonFunnel&quot;, 
+ TEXT(StageName) = &quot;Closed/Lost&quot;,  
+ TEXT(StageName) = &quot;Closed/Discontinued&quot;) ,
+ ISBLANK(Contacts__c),
+ ($Profile.Name &lt;&gt; &quot;54 Hosted Solutions Sales Operations&quot;),
+ ($Profile.Name &lt;&gt; &quot;55 Hosted Solutions Sales&quot;),
+ ($Profile.Name &lt;&gt; &quot;System Administrator&quot;),
+ ($Profile.Name &lt;&gt; &quot;Soup Integration&quot;),
+ ($Profile.Name &lt;&gt; &quot;04 NSC UI Administrator&quot;)
+)</errorConditionFormula>
+        <errorDisplayField>Contacts__c</errorDisplayField>
+        <errorMessage>Please select a contact.</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>ExcludeToIncludeInFunnel</fullName>
+        <active>false</active>
+        <description>This rule insures that if you change an Exclude from Funnel to an Include in Funnel, the selling stage also gets updated.</description>
+        <errorConditionFormula>And ( 
+$RecordType.Name = &apos;Include in Funnel&apos;, 
+OR( 
+ispickval(StageName, &apos;Analyzing - NonFunnel&apos;), 
+ispickval(StageName, &apos;Validating - NonFunnel&apos;), 
+ispickval(StageName, &apos;Offering - NonFunnel&apos;), 
+ispickval(StageName, &apos;Proposing - NonFunnel&apos;), 
+ispickval(StageName, &apos;Closing - NonFunnel&apos;), 
+ispickval(StageName, &apos;Closed/Booked - NonFunnel&apos;) 
+) 
+,($Profile.Name &lt;&gt; &quot;02 NSC Administrator&quot;) 
+,($Profile.Name &lt;&gt; &quot;04 NSC UI Administrator&quot;) 
+,($Profile.Name &lt;&gt; &quot;Soup Integration&quot;) 
+)</errorConditionFormula>
+        <errorMessage>Please select a valid Selling Stage Name</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Expected_Book_Date</fullName>
+        <active>false</active>
+        <description>Expected Book Date must be greater then the current date.</description>
+        <errorConditionFormula>AND(
+OR(
+if( ispickval( StageName ,&quot;Demand Creation&quot;), CloseDate &lt; TODAY(), false),
+if( ispickval( StageName ,&quot;Analyzing&quot;), CloseDate &lt; TODAY(), false),
+if( ispickval( StageName ,&quot;Validating&quot;), CloseDate &lt; TODAY(), false),
+if( ispickval( StageName ,&quot;Offering&quot;), CloseDate &lt; TODAY(), false),
+if( ispickval( StageName ,&quot;Proposing&quot;), CloseDate &lt; TODAY(), false),
+if( ispickval( StageName ,&quot;Closing&quot;), CloseDate &lt; TODAY(), false),
+if( ispickval( StageName ,&quot;Analyzing - NonFunnel&quot;), CloseDate &lt; TODAY(), false),
+if( ispickval( StageName ,&quot;Validating - NonFunnel&quot;), CloseDate &lt; TODAY(), false),
+if( ispickval( StageName ,&quot;Offering - NonFunnel&quot;), CloseDate &lt; TODAY(), false),
+if( ispickval( StageName ,&quot;Proposing - NonFunnel&quot;), CloseDate &lt; TODAY(), false),
+if( ispickval( StageName ,&quot;Closing - NonFunnel&quot;), CloseDate &lt; TODAY(), false))
+,($Profile.Name &lt;&gt; &quot;02 NSC Administrator&quot;)
+,($Profile.Name &lt;&gt; &quot;04 NSC UI Administrator&quot;)
+,($Profile.Name &lt;&gt; &quot;03 PRM Admin&quot;)
+,($Profile.Name &lt;&gt; &quot;Soup Integration&quot;)
+)</errorConditionFormula>
+        <errorDisplayField>CloseDate</errorDisplayField>
+        <errorMessage>Book Date must not be in the past.  Please select an appropriate date.</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Expected_Delivery_Date</fullName>
+        <active>false</active>
+        <description>Expected Delivery date has to be greater than the expected book date</description>
+        <errorConditionFormula>AND( 
+Expected_Delivery_Date__c &lt;= CloseDate,
+NOT( bypass_validation__c ), 
+($Profile.Name &lt;&gt; &quot;01 GS Admin&quot;), 
+($Profile.Name &lt;&gt; &quot;02 NSC Administrator&quot;), 
+($Profile.Name &lt;&gt; &quot;04 NSC UI Administrator&quot;), 
+($Profile.Name &lt;&gt; &quot;03 PRM Admin&quot;), 
+($Profile.Name &lt;&gt; &quot;Product System Administrator&quot;), 
+($Profile.Name &lt;&gt; &quot;System Administrator&quot;) , 
+($Profile.Name &lt;&gt; &quot;Soup Integration&quot;),
+($Profile.Name &lt;&gt; &quot;iPaas Administration&quot;),
+($Profile.Name &lt;&gt; &quot;C9 Administration&quot;) 
+)</errorConditionFormula>
+        <errorDisplayField>Expected_Delivery_Date__c</errorDisplayField>
+        <errorMessage>The Expected Delivery Start Date must be greater then the Expected Book Date</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Forecast_Category_Commit_Stage_Proposing</fullName>
+        <active>false</active>
+        <description>Forecast category can’t be updated to “Commit” if opportunity selling stage is prior to “Proposing.</description>
+        <errorConditionFormula>AND( (ISPICKVAL( Forecast_Category__c ,&apos;Commit&apos; )), OR( (ISPICKVAL( StageName , &apos;Analyzing&apos;)), (ISPICKVAL(StageName , &apos;Prospecting&apos;)),(ISPICKVAL(StageName , &apos;Validating&apos;)), (ISPICKVAL(StageName , &apos;Offering&apos;)), (ISPICKVAL(StageName , &apos;Analyzing - NonFunnel&apos;)), (ISPICKVAL(StageName , &apos;Validating - NonFunnel&apos;)), (ISPICKVAL(StageName , &apos;Offering - NonFunnel&apos;)) ))</errorConditionFormula>
+        <errorMessage>Forecast category can’t be set to “Commit” if Selling stage is prior to “Proposing&quot;</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Hosp_Opp_Validation_Rule</fullName>
+        <active>false</active>
+        <description>Add validation rule that allows the users to only enter a value in the probability field that ends with a 0 or a 5.</description>
+        <errorConditionFormula>AND(Probability &lt;&gt; 0,MOD(Probability * 100, 5) &lt;&gt; 0)</errorConditionFormula>
+        <errorDisplayField>Probability</errorDisplayField>
+        <errorMessage>The probability must be entered in increments of 5. Please update the probability field with a value that ends with a 0 or 5. Your opportunity must be 50% or higher with a forecast category of Commit or Upside to drive hardware demand.</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Hosp_and_Retail_Portfolio_Rest_PCR_Team</fullName>
+        <active>false</active>
+        <description>User with HSR Profile and PCR Roles  should only be allowed to select Hospitality or Retail Offer Portfolio.</description>
+        <errorConditionFormula>AND( 
+NOT(OR( 
+ISPICKVAL(Solution_Portfolio__c,&apos;Hospitality&apos;), 
+ISPICKVAL(Solution_Portfolio__c,&apos;Retail Assisted Service&apos;), 
+ISPICKVAL(Solution_Portfolio__c,&apos;Retail Self Service&apos;) 
+)), 
+OR( 
+$Profile.Name = &quot;50 Hospitality Account Director&quot;, 
+$Profile.Name = &quot;51 Hospitality Account Manager&quot;, 
+$Profile.Name = &quot;52 Hospitality Finance Manager&quot;, 
+$Profile.Name = &quot;53 Hospitality Channel Account Manager&quot; 
+), 
+OR( 
+$UserRole.Name = &quot;RET NAMER-PCR&quot;, 
+$UserRole.Name = &quot;NAMER DIRECTOR-PCR SALES&quot;, 
+$UserRole.Name = &quot;NAMER DIRECTOR-PCR ACCT MGT&quot;, 
+$UserRole.Name = &quot;NAMER ACCT MGR-PCR&quot;, 
+$UserRole.Name = &quot;NAMER SALES-PCR&quot;, 
+$UserRole.Name = &quot;NAMER SALES-PCR Sales&quot; 
+), 
+($Profile.Name &lt;&gt; &quot;Soup Integration&quot;) 
+)</errorConditionFormula>
+        <errorDisplayField>Solution_Portfolio__c</errorDisplayField>
+        <errorMessage>You must select Offer Portfolio = Hospitality or Retail</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Hospitality_Portfolio_Restriction</fullName>
+        <active>false</active>
+        <description>Hospitality profiles should not be able to select IPS in the Offer Portfolio field</description>
+        <errorConditionFormula>AND(  NOT( OR(ISPICKVAL(Solution_Portfolio__c,&apos;Hospitality&apos;),ISPICKVAL(Solution_Portfolio__c,&apos;Gaming&apos;),ISPICKVAL(Solution_Portfolio__c,&apos;Travel Self Service&apos;))), 
+     OR( 
+	$Profile.Name = &quot;50 Hospitality Account Director&quot;, 
+	$Profile.Name = &quot;51 Hospitality Account Manager&quot;, 
+	$Profile.Name = &quot;52 Hospitality Finance Manager&quot;, 
+	$Profile.Name = &quot;53 Hospitality Channel Account Manager&quot;
+)
+)</errorConditionFormula>
+        <errorDisplayField>Solution_Portfolio__c</errorDisplayField>
+        <errorMessage>Hospitality profiles allowed to select only Gaming, Hospitality, and Travel Self Service as the Offer Portfolio.</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Hospitality_Portfolio_Restriction_HSR</fullName>
+        <active>false</active>
+        <description>HSR Profile user should only be allowed to select Hospitality Portfolio.</description>
+        <errorConditionFormula>AND(
+	NOT(ISPICKVAL(Solution_Portfolio__c,&apos;Hospitality&apos;)),
+	OR(
+		$Profile.Name = &quot;50 Hospitality Account Director&quot;,
+		$Profile.Name = &quot;51 Hospitality Account Manager&quot;,
+		$Profile.Name = &quot;52 Hospitality Finance Manager&quot;,
+		$Profile.Name = &quot;53 Hospitality Channel Account Manager&quot;
+	),
+	NOT(OR(
+	 $UserRole.Name = &quot;RET NAMER-PCR&quot;,
+	 $UserRole.Name = &quot;NAMER DIRECTOR-PCR SALES&quot;,
+	 $UserRole.Name = &quot;NAMER DIRECTOR-PCR ACCT MGT&quot;,
+	 $UserRole.Name = &quot;NAMER ACCT MGR-PCR&quot;,
+	 $UserRole.Name = &quot;NAMER SALES-PCR&quot;,
+	 $UserRole.Name = &quot;NAMER SALES-PCR Sales&quot;
+	)),
+        ($Profile.Name &lt;&gt; &quot;Soup Integration&quot;)
+)</errorConditionFormula>
+        <errorDisplayField>Solution_Portfolio__c</errorDisplayField>
+        <errorMessage>You must select Offer Portfolio = Hospitality</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Inactive_Solution_Team</fullName>
+        <active>false</active>
+        <description>Prevents the User having an inactive Solution Team on their Opportunity.</description>
+        <errorConditionFormula>AND(
+Sales_Org__r.Is_Active_in_RoR__c =FALSE
+,($Profile.Name &lt;&gt; &quot;02 NSC Administrator&quot;)
+,($Profile.Name &lt;&gt; &quot;04 NSC UI Administrator&quot;)
+,($Profile.Name &lt;&gt; &quot;Soup Integration&quot;)
+,($Profile.Name &lt;&gt; &quot;iPaas Administration&quot;)
+,($Profile.Name &lt;&gt; &quot;C9 Administration&quot;)
+,($Profile.Name &lt;&gt; &quot;Soup Integration&quot;)  
+)</errorConditionFormula>
+        <errorDisplayField>Sales_Org__c</errorDisplayField>
+        <errorMessage>You have an inactive Sales Team on this opportunity.  Please select an active Sales Team.</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>IncludetoExcludefromFunnel</fullName>
+        <active>false</active>
+        <description>This rule ensures that if an opportunity record type is changed from include to exclude, that the selling stages are updated appropriately to ensure that the opportunity does not show up in the forecast views</description>
+        <errorConditionFormula>And ( 
+$RecordType.Name = &apos;Exclude from Funnel&apos;, 
+OR( 
+ispickval(StageName, &apos;Analyzing&apos;), 
+ispickval(StageName, &apos;Validating&apos;), 
+ispickval(StageName, &apos;Offering&apos;), 
+ispickval(StageName, &apos;Proposing&apos;), 
+ispickval(StageName, &apos;Closing&apos;), 
+ispickval(StageName, &apos;Closed/Booked&apos;) 
+) 
+,($Profile.Name &lt;&gt; &quot;02 NSC Administrator&quot;)
+,($Profile.Name &lt;&gt; &quot;04 NSC UI Administrator&quot;)
+,($Profile.Name &lt;&gt; &quot;Soup Integration&quot;) 
+)</errorConditionFormula>
+        <errorMessage>Please select a valid Selling Stage Name</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Mandate_End_Customer</fullName>
+        <active>false</active>
+        <errorConditionFormula>AND(
+NOT(Skip_Validation_Rule_for_Lead_Conversion__c),
+OR(
+AND($RecordType.Name = &apos;Indirect - Include in Funnel Reseller&apos;,Run_Rate_Opportunity__c = False,End_Customer__c == null, End_Customer_Non_NCR__c == null,
+($Profile.Name &lt;&gt; &quot;02 NSC Administrator&quot;), 
+($Profile.Name &lt;&gt; &quot;04 NSC UI Administrator&quot;), 
+($Profile.Name &lt;&gt; &quot;Soup Integration&quot;), 
+($Profile.Name &lt;&gt; &quot;iPaas Administration&quot;), 
+($Profile.Name &lt;&gt; &quot;C9 Administration&quot;))
+,
+AND($RecordType.Name = &apos;Indirect - Include in Funnel Distributor&apos;,Run_Rate_Opportunity__c = False,End_Customer__c == null, End_Customer_Non_NCR__c == null,
+($Profile.Name &lt;&gt; &quot;02 NSC Administrator&quot;), 
+($Profile.Name &lt;&gt; &quot;04 NSC UI Administrator&quot;), 
+($Profile.Name &lt;&gt; &quot;Soup Integration&quot;), 
+($Profile.Name &lt;&gt; &quot;iPaas Administration&quot;), 
+($Profile.Name &lt;&gt; &quot;C9 Administration&quot;))
+,
+AND($RecordType.Name = &apos;Indirect - Exclude from Funnel&apos;,Run_Rate_Opportunity__c = False,End_Customer__c == null, End_Customer_Non_NCR__c == null,
+($Profile.Name &lt;&gt; &quot;02 NSC Administrator&quot;), 
+($Profile.Name &lt;&gt; &quot;04 NSC UI Administrator&quot;), 
+($Profile.Name &lt;&gt; &quot;Soup Integration&quot;), 
+($Profile.Name &lt;&gt; &quot;iPaas Administration&quot;), 
+($Profile.Name &lt;&gt; &quot;C9 Administration&quot;))
+))</errorConditionFormula>
+        <errorDisplayField>End_Customer__c</errorDisplayField>
+        <errorMessage>End Customer is Mandatory for all indirect non run rate opportunities. Please populate End Customer field.</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>OpportunityClonePackage</fullName>
+        <active>false</active>
+        <description>When a user tries to edit a cloned opportunity , he is expected to replace &quot;CLONED&quot; with a valid Sales Team Organization Code .</description>
+        <errorConditionFormula>AND(NOT(ISNEW()), NOT(ISCHANGED(Sales_Org__c)), PRIORVALUE(Sales_Org__c) = &apos;a0R7000000c4QxP&apos; 
+)</errorConditionFormula>
+        <errorDisplayField>Sales_Org__c</errorDisplayField>
+        <errorMessage>PLEASE SELECT A VALID RECORD FOR Sales Team Organization OR CONTACT YOUR ADMIN</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Opportunity_Amount_Length</fullName>
+        <active>false</active>
+        <description>Enforces that the Opportunity Amount is not greater than 18 characters</description>
+        <errorConditionFormula>AND(
+Amount &gt; (100000000.00 * 50)
+,($Profile.Name &lt;&gt; &quot;02 NSC Administrator&quot;)
+,($Profile.Name &lt;&gt; &quot;04 NSC UI Administrator&quot;)
+,($Profile.Name &lt;&gt; &quot;Soup Integration&quot;)
+)</errorConditionFormula>
+        <errorMessage>The total opportunity value exceeds the maximum opportunity value of 100,000,000.00 USD. Please reduce the amount.</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Opportunity_Annuity_Contract_Valu_Length</fullName>
+        <active>false</active>
+        <description>Enforces that the Opportunity Annuity Contract Value is not greater than 18 characters</description>
+        <errorConditionFormula>AND(
+Annuity_Contract_Value__c &gt; 99999999999999.99
+,($Profile.Name &lt;&gt; &quot;02 NSC Administrator&quot;)
+,($Profile.Name &lt;&gt; &quot;04 NSC UI Administrator&quot;)
+,($Profile.Name &lt;&gt; &quot;Soup Integration&quot;)
+)</errorConditionFormula>
+        <errorMessage>Annuity Contract Value is Too Big!!</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Opportunity_Description_Length</fullName>
+        <active>false</active>
+        <description>Enforces that the Opportunity Description is not longer then 1024 characters</description>
+        <errorConditionFormula>AND(
+LEN(Description) &gt; 1024
+,($Profile.Name &lt;&gt; &quot;02 NSC Administrator&quot;)
+,($Profile.Name &lt;&gt; &quot;04 NSC UI Administrator&quot;)
+,($Profile.Name &lt;&gt; &quot;Soup Integration&quot;)
+)</errorConditionFormula>
+        <errorDisplayField>Description</errorDisplayField>
+        <errorMessage>Opportunity Description Length exceeds 1024 characters. Please limit to 1024</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Opportunity_Name_Length</fullName>
+        <active>false</active>
+        <description>Enforces that the Opportunity Name is not longer then 50 characters</description>
+        <errorConditionFormula>AND(
+LEN(Name) &gt; 50
+,($Profile.Name &lt;&gt; &quot;02 NSC Administrator&quot;)
+,($Profile.Name &lt;&gt; &quot;04 NSC UI Administrator&quot;)
+,($Profile.Name &lt;&gt; &quot;Soup Integration&quot;)
+)</errorConditionFormula>
+        <errorDisplayField>Name</errorDisplayField>
+        <errorMessage>Opportunity Name Length exceeds 50 characters.  Please limit to 50 characters.</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Opportunity_and_Account_Currency</fullName>
+        <active>false</active>
+        <description>Opportunity Currency Must Match Account Currency</description>
+        <errorConditionFormula>AND(
+IF( 
+ISPICKVAL( CurrencyIsoCode , &apos;U.S. Dollar&apos;) &lt;&gt;  
+ISPICKVAL( Account.CurrencyIsoCode , &apos;U.S. Dollar&apos;)  , TRUE, FALSE)
+,($Profile.Name &lt;&gt; &quot;02 NSC Administrator&quot;)
+,($Profile.Name &lt;&gt; &quot;04 NSC UI Administrator&quot;)
+,($Profile.Name &lt;&gt; &quot;Soup Integration&quot;)
+)</errorConditionFormula>
+        <errorDisplayField>CurrencyIsoCode</errorDisplayField>
+        <errorMessage>Opportunity Currency Must Match Account Currency</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Payments_Rep_field_required</fullName>
+        <active>false</active>
+        <description>This validation rule is to make the Payments Rep field required for certain HOSP profiles once an opportunity has already been created.</description>
+        <errorConditionFormula>AND (NOT(Skip_Validation_Rule_for_Lead_Conversion__c),
+( ISBLANK( Payments_Rep__c )),
+(Id &lt;&gt; NULL),
+OR(
+$Profile.Name = &apos;Hospitality TAM&apos;,
+$Profile.Name = &apos;Standard User&apos;
+))</errorConditionFormula>
+        <errorDisplayField>Payments_Rep__c</errorDisplayField>
+        <errorMessage>The Payments Rep field must be filled out on this opportunity.</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Prevent_users_create_modify_records</fullName>
+        <active>false</active>
+        <errorConditionFormula>Not(OR ($Profile.Name = &quot;04 NSC UI Administrator&quot;)          
+    )</errorConditionFormula>
+        <errorMessage>We are in process of deploying enhancements to the NCR SalesCentral environment. You will not be able to create/modify opportunities between Midnight and 4:00am EDT on 4/10/2011.  We apologize for any inconvenience this has caused.</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Prevent_users_modify_a_closed_opp</fullName>
+        <active>false</active>
+        <description>does not allow a user to modify the selling stage from Closed/Booked, Closed/Lost, Closed/Discontinued to one of the open choices (all other selling stages).</description>
+        <errorConditionFormula>AND (
+  OR (
+     ISPICKVAL(PRIORVALUE(StageName), &quot;Closed/Booked&quot;),
+     ISPICKVAL(PRIORVALUE(StageName), &quot;Closed/Lost&quot;),
+     ISPICKVAL(PRIORVALUE(StageName), &quot;Closed/Discontinued&quot;)
+),
+Account.Active_Account__c = True, RecordTypeId ==&quot;012700000001PoZ&quot;,
+ISCHANGED(StageName),
+($Profile.Name &lt;&gt; &quot;02 NSC Administrator&quot;),
+($Profile.Name &lt;&gt; &quot;04 NSC UI Administrator&quot;),
+($Profile.Name &lt;&gt; &quot;Soup Integration&quot;),
+($Profile.Name &lt;&gt; &quot;iPaas Administration&quot;) ,
+($Profile.Name &lt;&gt; &quot;C9 Administration&quot;) ,
+bypass_validation__c&lt;&gt;true 
+)</errorConditionFormula>
+        <errorMessage>Opportunity stage changes are not allowed after an opportunity has been closed. Please contact NSC Administrator using the Need Help button if you need to re-open or to make changes to this opportunity.</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>PreventinvalidsellingforExclude</fullName>
+        <active>false</active>
+        <description>which will perevent the opportunity record from saving with invalid selling stage on creation.
+This is for &apos;Exclude from Funnel&apos; Record Type.</description>
+        <errorConditionFormula>AND 
+( 
+ISNEW(), 
+AND
+( 
+$RecordType.Name = &apos;Exclude from Funnel&apos;, 
+OR( 
+CASE(StageName,
+&quot;Analyzing - NonFunnel&quot;, 1,
+&quot;Validating - NonFunnel&quot;, 1,
+&quot;Offering - NonFunnel&quot;, 1,
+&quot;Proposing - NonFunnel&quot;, 1,
+&quot;Closing - NonFunnel&quot;, 1,
+&quot;Closed/Booked - NonFunnel&quot;, 1,
+&quot;Closed/Lost&quot;, 1,
+&quot;Closed/Discontinued&quot;, 1,0) &lt;&gt; 1)))</errorConditionFormula>
+        <errorDisplayField>StageName</errorDisplayField>
+        <errorMessage>Please select a valid Selling Stage</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>PreventinvalidsellingforInclude</fullName>
+        <active>false</active>
+        <description>which will perevent the opportunity record from saving with invalid selling stage on creation. 
+This is for &apos;Include from Funnel&apos; Record Type.</description>
+        <errorConditionFormula>AND 
+( 
+ISNEW(), 
+AND 
+( 
+$RecordType.Name = &apos;Include in Funnel&apos;, 
+OR( 
+CASE(StageName, 
+&quot;Analyzing&quot;, 1, 
+&quot;Validating&quot;, 1, 
+&quot;Offering&quot;, 1, 
+&quot;Proposing&quot;, 1, 
+&quot;Closing&quot;, 1, 
+&quot;Closed/Booked&quot;, 1, 
+&quot;Closed/Lost&quot;, 1, 
+&quot;Closed/Discontinued&quot;, 1,0) &lt;&gt; 1)))</errorConditionFormula>
+        <errorDisplayField>StageName</errorDisplayField>
+        <errorMessage>Please select a valid Selling Stage</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Prospecting_stage_forecast_category</fullName>
+        <active>false</active>
+        <description>If selling stage is Prospecting then Forecast Category should only be omitted.</description>
+        <errorConditionFormula>AND((ISPICKVAL( StageName , &apos;Prospecting&apos;)), (NOT(ISPICKVAL(Forecast_Category__c, &apos;Omitted&apos;))))</errorConditionFormula>
+        <errorMessage>Opportunities with Prospecting Selling Stage can only have the Omitted Forecast Category.</errorMessage>
+    </validationRules>
+    <validationRules>
+        <fullName>Validate_Hospitality_Type_values</fullName>
+        <active>false</active>
+        <description>When Offer Portfolio = Hospitality, only these 4 &quot;Types&quot; should be able to be chosen: Existing Customer - New Solution/Service, Existing Customer - Ongoing Roll-out, Indirect Channel &amp; New Customer.</description>
+        <errorConditionFormula>AND(
+	ISPICKVAL(Solution_Portfolio__c,&apos;Hospitality&apos;),
+	NOT(ISPICKVAL(Type,&apos;Existing Customer - New Solution/Service&apos;)),
+	NOT(ISPICKVAL(Type,&apos;Existing Customer - Ongoing Roll-out&apos;)),
+	NOT(ISPICKVAL(Type,&apos;Indirect Channel&apos;)),
+	NOT(ISPICKVAL(Type,&apos;New Customer&apos;)),
+       ($Profile.Name &lt;&gt; &quot;Soup Integration&quot;)
+)</errorConditionFormula>
+        <errorDisplayField>Type</errorDisplayField>
+        <errorMessage>You selected Offer Portfolio = Hospitality. You must select one of the following Types: Existing Customer - New Solution/Service, Existing Customer - Ongoing Roll-out, Indirect Channel or New Customer.</errorMessage>
+    </validationRules>
+    <validationRules>
         <fullName>Channel_Office_field_required</fullName>
         <active>false</active>
         <errorConditionFormula>AND (NOT(Skip_Validation_Rule_for_Lead_Conversion__c), 
